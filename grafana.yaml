@@ -1,0 +1,144 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: grafana-etc-volume
+spec:
+  capacity:
+    storage: 10Gi # This size is used to match a volume to a tenents claim
+  accessModes:
+    - ReadWriteOnce # Access modes are defined below
+  storageClassName: slow
+  persistentVolumeReclaimPolicy: Recycle # Reclaim policies are defined below
+  nfs:
+    server: alexandria.local # Please change this to your NFS server
+    path: /tank/kubestore/grafana/etc # Please change this to the relevant share
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-etc-nfs
+spec:
+  storageClassName: slow
+  accessModes:
+    - ReadWriteOnce # Access modes for volumes is defined under Persistent Volumes
+  resources:
+    requests:
+      storage: 10Gi # volume size requested
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: grafana-lib-volume
+spec:
+  capacity:
+    storage: 10Gi # This size is used to match a volume to a tenents claim
+  accessModes:
+    - ReadWriteOnce # Access modes are defined below
+  storageClassName: slow
+  persistentVolumeReclaimPolicy: Recycle # Reclaim policies are defined below
+  nfs:
+    server: alexandria.local # Please change this to your NFS server
+    path: /tank/kubestore/grafana/lib # Please change this to the relevant share
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-lib-nfs
+spec:
+  storageClassName: slow
+  accessModes:
+    - ReadWriteOnce # Access modes for volumes is defined under Persistent Volumes
+  resources:
+    requests:
+      storage: 10Gi # volume size requested
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: grafana-log-volume
+spec:
+  capacity:
+    storage: 10Gi # This size is used to match a volume to a tenents claim
+  accessModes:
+    - ReadWriteOnce # Access modes are defined below
+  storageClassName: slow
+  persistentVolumeReclaimPolicy: Recycle # Reclaim policies are defined below
+  nfs:
+    server: alexandria.local # Please change this to your NFS server
+    path: /tank/kubestore/grafana/log # Please change this to the relevant share
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-log-nfs
+spec:
+  storageClassName: slow
+  accessModes:
+    - ReadWriteOnce # Access modes for volumes is defined under Persistent Volumes
+  resources:
+    requests:
+      storage: 10Gi # volume size requested
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      volumes:
+        - name: grafana-lib-nfs
+          persistentVolumeClaim:
+            claimName: grafana-lib-nfs
+        - name: grafana-log-nfs
+          persistentVolumeClaim:
+            claimName: grafana-log-nfs
+      containers:
+        - name: grafana
+          image: grafana/grafana
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: grafana-lib-nfs
+              mountPath: /var/lib/grafana
+            - name: grafana-log-nfs
+              mountPath: /var/log/grafana
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  labels:
+    app: grafana
+spec:
+  type: NodePort
+  ports:
+    - port: 3000
+      protocol: TCP
+  selector:
+    app: grafana
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+  name: grafana
+spec:
+  rules:
+  - host: grafana.kube.local
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: grafana
+          servicePort: 3000

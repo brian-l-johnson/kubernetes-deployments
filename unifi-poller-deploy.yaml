@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unifi-poller
+  labels:
+    app: unifi-poller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: unifi-poller
+  template:
+    metadata:
+      labels:
+        app: unifi-poller
+    spec:
+      containers:
+        - name: unifi-poller
+          image: golift/unifi-poller
+          env:
+          - name: UP_UNIFI_DEFAULT_URL
+            value: "https://util.local:8443"
+          - name: UP_UNIFI_DEFAULT_USER
+            value: "unifi-poller"
+          - name: UP_UNIFI_DEFAULT_PASS
+            value: ###UNIFIPOLLERPW###
+          - name: UP_INFLUXDB_URL
+            value: "http://influxdb.kube.local:80"

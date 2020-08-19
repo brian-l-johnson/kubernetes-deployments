@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: jenkins-volume
+spec:
+  capacity:
+    storage: 10Gi # This size is used to match a volume to a tenents claim
+  accessModes:
+    - ReadWriteOnce # Access modes are defined below
+  storageClassName: slow
+  persistentVolumeReclaimPolicy: Recycle # Reclaim policies are defined below
+  nfs:
+    server: alexandria.local # Please change this to your NFS server
+    path: /tank/kubestore/jenkins # Please change this to the relevant share
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jenkins-nfs
+spec:
+  storageClassName: slow
+  accessModes:
+    - ReadWriteOnce # Access modes for volumes is defined under Persistent Volumes
+  resources:
+    requests:
+      storage: 10Gi # volume size requested
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins
+  labels:
+    app: jenkins
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenkins
+  template:
+    metadata:
+      labels:
+        app: jenkins
+    spec:
+      volumes:
+        - name: jenkins-nfs
+          persistentVolumeClaim:
+            claimName: jenkins-nfs
+      containers:
+        - name: jenkins
+          image: manage:5000/jenkins-rpi
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: jenkins-nfs
+              mountPath: /var/jenkins
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins
+  labels:
+    app: jenkins
+spec:
+  type: NodePort
+  ports:
+    - port: 8080
+      protocol: TCP
+  selector:
+    app: jenkins
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+  name: jenkins
+spec:
+  rules:
+  - host: jenkins.kube.local
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: jenkins
+          servicePort: 8080
