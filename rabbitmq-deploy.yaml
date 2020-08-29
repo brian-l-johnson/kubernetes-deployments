@@ -82,3 +82,19 @@ spec:
       protocol: TCP
   selector:
     app: rabbitmq
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+  name: jenkins
+spec:
+  rules:
+  - host: rabbit-mgmt.kube.local
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: rabbitmq-management
+          servicePort: 15672
