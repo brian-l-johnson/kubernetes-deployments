@@ -19,7 +19,7 @@ spec:
           image: golift/unifi-poller
           env:
           - name: UP_UNIFI_DEFAULT_URL
-            value: "https://util.local:8443"
+            value: "https://cloudkey.local"
           - name: UP_UNIFI_DEFAULT_USER
             value: "unifi-poller"
           - name: UP_UNIFI_DEFAULT_PASS
